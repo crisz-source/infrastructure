@@ -1,0 +1,55 @@
+--- #instalando o wordpress
+    - name: Criando um diretório
+      ansible.builtin.file:  #gerenciamento de arquivos
+        path: /srv/www #caminho que será criado
+        state: directory #tipo diretório
+        owner: www-data #trocando o dono e o grupo que essa pasta tera
+        group: www-data 
+        mode: '0755'
+      become: yes 
+    - name: Descompactar um arquivo que precisa ser baixado 
+      ansible.builtin.unarchive:
+        src: https://wordpress.org/latest.tar.gz #baixanod um arquivo 
+        dest: /srv/www #destino da pasta que foi criada no gerenciamento de arquivos
+        remote_src: yes #fazendo o download na máquina que a aplicação vai rodar
+      become: yes
+    - name: Copiando um arquivo e permissões 
+      ansible.builtin.template:
+        src: templates/wordpress.conf.j2 #este arquivo está na máquina local
+        dest: /etc/apache2/sites-available/000-default.conf #destino da onde vai ser criado este arquivo na máquina remota
+      become: yes 
+      notify: # notificação que o apache será reiniciado
+        - restart apache #nome do handler
+    - name: Copiando e mantendo os arquvios na máquina remota
+      ansible.builtin.copy: 
+        src: /srv/www/wordpress/wp-config-sample.php
+        dest: /srv/www/wordpress/wp-config.php
+        force: no #caso o arquivo acima exista, não vai realizar a cópia novamente
+        remote_src: yes
+      become: yes 
+    - name: configurando wp-config com o db
+      ansible.builtin.replace: #substituindo arquivos
+        path: /srv/www/wordpress/wp-config.php
+        regexp: '{{ item.regexp }}' #acessando valores dentro do loop
+        replace: '{{ item.replace }}' 
+      with_items: #loop
+      - { regexp: "database_name_here", replace: "wordpress_db"} 
+      - { regexp: "username_here", replace: "wordpress_user" }
+      - { regexp: "password_here", replace: "12345" }   
+      - { regexp: "localhost", replace: "34.213.163.215" } # mudando o ip localhost para o ip da máquina que está rodando o DB
+      become: yes
+    - name: substituição de arquivos para mais segurança
+      ansible.builtin.lineinfile:
+        path: /srv/www/wordpress/wp-config.php
+        search_string: '{{ item.search_string }}' 
+        line: '{{ item.line }}' 
+      with_items: #loop
+      - { search_string: "define( 'AUTH_KEY',         'put your unique phrase here' );", line: "define('AUTH_KEY',         '<-X<^]m(k/MB|<{tS7h=Dn`j0a@7X/b-nk[@)WQfcqtXh3T7!*M|tcoz>xpsP9bL');" }
+      - { search_string: "define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );", line: "define('SECURE_AUTH_KEY',  'zI@uKhm$U@KKj 9BCc#|7C>I?sKfOfx~UOVoL!K,%(%Edo9Ue8ebdBC%+NBI38,}');" }
+      - { search_string: "define( 'LOGGED_IN_KEY',    'put your unique phrase here' );", line: "define('LOGGED_IN_KEY',    'L+SFb@$G&+VX51GU e-ftcfS,N*3HQ$k}.0ei-z[xJXMTe,oXB+MTki%AyDP>(n]');" }
+      - { search_string: "define( 'NONCE_KEY',        'put your unique phrase here' );", line: "define('NONCE_KEY',        'NQ v(9AWf!T~jxrvFLTOJ-h|#S[VHW0J;J=-N]qi]t1|s;4)kTRg|=|eNM_}^D@^');" }
+      - { search_string: "define( 'AUTH_SALT',        'put your unique phrase here' );", line: "define('AUTH_SALT',        'w. ]%k:,:XUWyk~,f CM`)!:{w%c;<m._fT&Hx=zJ!(dz;lG:}#67P*+nU1&C<YS');" }
+      - { search_string: "define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );", line: "define('SECURE_AUTH_SALT', 'J_@pr}@n{xcY($b.L-x0mayVnCV?k_F,t*JI7-]RVOC,?>{,1X=kmYouaC{qB/uk');" }
+      - { search_string: "define( 'LOGGED_IN_SALT',   'put your unique phrase here' );", line: "define('LOGGED_IN_SALT',   'Su]$1aM}#,)LYEkf=kKE>g)xUHb)GQ:p^Qd]|e/^h#0,)JwIa9&;[*MZlR(yhe4{');" }
+      - { search_string: "define( 'NONCE_SALT',       'put your unique phrase here' );", line: "define('NONCE_SALT',       'hwR3F-/{Cwhq%-[vZ->W-||E*XSV6!y~Lc&76gt%gXmb+gZukH^TQ&4U~3K9*mt~');" }
+      become: yes

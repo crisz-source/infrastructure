@@ -1,0 +1,6 @@
+--- #reiniciando o mysql
+    - name: restart mysql 
+      service: #será executado o service
+        name: mysql
+        state: restarted
+      become: yes

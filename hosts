@@ -1,0 +1,5 @@
+[wordpress]
+35.90.214.123 ansible_user=ubuntu ansible_ssh_private_key_file='/home/cris/Downloads/Ansible/delta1.pem'
+
+[mysql]
+34.213.163.215 ansible_user=ubuntu ansible_ssh_private_key_file='/home/cris/Downloads/Ansible/deltaDB.pem'
